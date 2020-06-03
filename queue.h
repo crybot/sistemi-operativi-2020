@@ -1,6 +1,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
-#include <stdlib.h> /* incluso per size_t */
+#include <stdlib.h> /* size_t */
+#include <pthread.h> /* pthread_mutex_t */
 
 typedef struct queue_node {
   struct queue_node *next;
@@ -10,6 +11,7 @@ typedef struct queue_node {
 typedef struct queue {
   queue_node_t *head;
   queue_node_t *tail;
+  pthread_mutex_t mtx;
 }queue_t;
 
 
@@ -17,6 +19,9 @@ extern queue_t *queue_create();
 extern int queue_empty(queue_t *queue);
 extern void queue_push(queue_t *queue, void *value);
 extern void *queue_pop(queue_t *queue);
+extern void *queue_top(queue_t *queue);
 extern size_t queue_size(queue_t *queue);
+extern void queue_free(queue_t *queue);
+extern void queue_map(void (*f)(void*), queue_t *queue);
 
 #endif

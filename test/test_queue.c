@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     assert(!queue_empty(queue));
     assert(queue->head != NULL);
     assert(queue->tail != NULL);
-    assert(queue->head->value == (void*)argv[i]);
+    assert(queue->tail->value == (void*)argv[i]);
     assert(queue_size(queue) == (size_t) i);
   }
 
@@ -23,7 +23,8 @@ int main(int argc, char *argv[]) {
     assert(!queue_empty(queue));
     assert(queue->head != NULL);
     assert(queue->tail != NULL);
-    assert(queue_pop(queue) == (void*)argv[argc - i]);
+    assert(queue_top(queue) == (void*)argv[i]);
+    assert(queue_pop(queue) == (void*)argv[i]);
     assert(queue_size(queue) == (size_t)(argc - i - 1));
   }
 
