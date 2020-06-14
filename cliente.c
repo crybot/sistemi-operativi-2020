@@ -10,7 +10,7 @@
 /*
  * Thread di lavoro dei clienti.
  */
-static void* working_thread(void* arg) {
+void* cliente_worker(void* arg) {
   assert(arg != NULL);
   cliente_t* cliente = (cliente_t*) arg;
 
@@ -19,12 +19,12 @@ static void* working_thread(void* arg) {
    * generazione di numeri casuali.
    */
   unsigned int seed = safe_seed();
-  printf("SEED GENERATO DA CLIENTE: %d\n", seed);
+  // printf("SEED GENERATO DA CLIENTE: %d\n", seed);
 
   /* creazione record timespec e conversione dwell_time in nanosecondi */
   struct timespec ts;
-  ts.tv_sec = 0;
-  ts.tv_nsec = cliente->dwell_time * 1000 * 1000;
+  ts.tv_sec = cliente->dwell_time / 1000; // secondi
+  ts.tv_nsec = (cliente->dwell_time % 1000)*1000*1000; // nanosecondi
 
   /* cliente impiega dwell_time millisecondi scegliendo i prodotti */
   nanosleep(&ts, &ts);
@@ -34,12 +34,12 @@ static void* working_thread(void* arg) {
   /* thread loop: 
    * attende finchè il cliente non viene servito,
    * la cassa è stata chiusa, oppure il supermercato sta chiudendo.
-   * TODO: utilizzare condition variable invece di attesa attiva.
    */
   cassiere_t *cassa;
 
-  /* TODO: utilizzare condition variable invece di attesa attiva. */
+  pthread_mutex_lock_safe(&cliente->mtx);
   while(!cliente->servito) {
+
     /* Se il cliente non è accodato ad alcuna cassa o se la cassa a in cui è in
      * coda è stata chiusa, cerca una cassa aperta e vi si accoda
      * Nota: la cassa è chiusa solo dopo che il cliente corrente è stato
@@ -51,7 +51,7 @@ static void* working_thread(void* arg) {
       cassa = place_cliente(cliente, cliente->supermercato, &seed);
     }
     else if (!is_cassa_active(cliente->cassiere) 
-         && !is_cassa_closing(cliente->cassiere)) {
+        && !is_cassa_closing(cliente->cassiere)) {
       cassa = place_cliente(cliente, cliente->supermercato, &seed);
     }
 
@@ -60,17 +60,20 @@ static void* working_thread(void* arg) {
       assert(!cliente->servito);
       assert(cliente->cassiere == NULL || !is_cassa_closing(cliente->cassiere));
       printf("Cliente terminato per mancanza di casse aperte\n");
+      pthread_mutex_unlock_safe(&cliente->mtx);
 
       return (void*) 1; /* cliente non servito */
     }
-    sleep(1);
+
+    pthread_cond_wait(&cliente->servito_cond, &cliente->mtx);
   }
 
+  pthread_mutex_unlock_safe(&cliente->mtx);
   return (void*) 0;
 }
 
 /*
- * Alloca un cliente e avvia il suo thread di lavoro.
+ * Alloca un cliente.
  * - dwell_time indica il tempo (in millisecondi) che impiega il cliente per 
  *   scegliere i prodotti da acquistare;
  * - products indica il numero di prodotti che acquisterà il cliente.
@@ -92,8 +95,8 @@ cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermer
   cliente->servito = 0;
   cliente->supermercato = supermercato;
   cliente->cassiere = NULL;
-
-  pthread_create(&cliente->thread_id, NULL, &working_thread, (void*)cliente);
+  pthread_mutex_init_ec(&cliente->mtx, NULL);
+  pthread_cond_init(&cliente->servito_cond, NULL);
 
   return cliente;
 }
@@ -103,9 +106,15 @@ cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermer
  * effettuato il join.
  */
 void free_cliente(cliente_t* cliente) {
-  pthread_join(cliente->thread_id, NULL);
+  // pthread_join(cliente->thread_id, NULL);
   printf("Liberando memoria cliente...\n");
   free(cliente);
 }
 
+void set_servito(cliente_t *cliente, int servito) {
+  pthread_mutex_lock_safe(&cliente->mtx);
+  cliente->servito = servito;
+  pthread_cond_signal(&cliente->servito_cond);
+  pthread_mutex_unlock_safe(&cliente->mtx);
+}
 

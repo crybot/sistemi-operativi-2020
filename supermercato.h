@@ -17,7 +17,9 @@ typedef struct supermercato {
 extern supermercato_t *create_supermercato(int max_casse, int num_casse, int tempo);
 extern void close_supermercato(supermercato_t *supermercato);
 extern void free_supermercato(supermercato_t *supermercato);
-extern cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsigned int *seed);
+extern cassiere_t *place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsigned int *seed);
+extern cassiere_t *open_cassa_supermercato(supermercato_t *supermercato);
+extern cassiere_t *close_cassa_supermercato(supermercato_t *supermercato);
 
 #endif
 

@@ -31,7 +31,7 @@ supermercato_t *create_supermercato(int max_casse, int num_casse, int tempo) {
   s->num_casse = num_casse;
 
   /* Inizializzazione mutex cassieri */
-  pthread_mutex_init(&s->cassieri_mtx, NULL);
+  pthread_mutex_init_ec(&s->cassieri_mtx, NULL);
   
   /* Allocazione cassieri */
   s->cassieri = (cassiere_t*) malloc(sizeof(cassiere_t)*max_casse);
@@ -63,17 +63,17 @@ void close_supermercato(supermercato_t *supermercato) {
   assert(supermercato != NULL);
   assert((int)supermercato->num_casse >= 0);
 
-  pthread_mutex_lock(&supermercato->cassieri_mtx);
+  pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
   /* Informa tutti i cassieri di chiudere le casse */
   for (uint i=0; i<supermercato->max_casse; i++) {
-    if (is_cassa_active(&supermercato->cassieri[i])) {
-      assert(!is_cassa_closing(&supermercato->cassieri[i]));
+    if (is_cassa_active(&supermercato->cassieri[i])
+        && !is_cassa_closing(&supermercato->cassieri[i])) {
       close_cassa(&supermercato->cassieri[i]);
       supermercato->num_casse--;
       assert((int)supermercato->num_casse >= 0);
     }
   }
-  pthread_mutex_unlock(&supermercato->cassieri_mtx);
+  pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
 
   /* 
    * Attendi la chiusura effettiva di ogni cassa:
@@ -113,10 +113,10 @@ cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsi
   assert(cliente != NULL && supermercato != NULL);
   assert(seed != NULL);
 
-  pthread_mutex_lock(&supermercato->cassieri_mtx);
+  pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
 
   if (supermercato->num_casse == 0) { /* Non ci sono casse aperte */
-    pthread_mutex_unlock(&supermercato->cassieri_mtx);
+    pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
     return NULL;
   }
 
@@ -141,9 +141,6 @@ cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsi
     }
   }
 
-  if (scelta == NULL) {
-    printf("SCELTA == NULL: r=%d, attive=%d, num_casse=%d\n", r, attive, supermercato->num_casse);
-  }
   assert(scelta != NULL); /* deve esserci almeno una cassa aperta */
   assert(attive == r + 1); /* le casse attive visitate in sequenza sono r - 1 */
 
@@ -151,8 +148,89 @@ cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsi
   printf("CASSA %d: nuovo cliente incodato\n", cassa_id(scelta));
   add_cliente(scelta, cliente);
 
-  pthread_mutex_unlock(&supermercato->cassieri_mtx);
+  pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
 
   return scelta;
+}
+
+
+/*
+ * Apre la prima cassa disponibile del supermercato.
+ * Se non ce ne sono, restituisce NULL, altrimenti restituisce il puntatore
+ * alla cassa aperta.
+ */
+cassiere_t *open_cassa_supermercato(supermercato_t *supermercato) {
+  assert(supermercato != NULL);
+  assert((int)supermercato->num_casse >= 0);
+
+  pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
+
+  cassiere_t *cassa = NULL;
+  /* cerca la prima cassa che rispetta le condizioni per essere aperta */
+  for (uint i=0; i<supermercato->max_casse && cassa == NULL; i++) {
+
+    /* se la cassa non è attiva e non è in chiusura */
+    if (!is_cassa_active(&supermercato->cassieri[i]) 
+        && !is_cassa_closing(&supermercato->cassieri[i])) {
+      /* mi assicuro che il thread del cassiere sia già stato terminato */
+      pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
+      wait_cassa(&supermercato->cassieri[i]);
+      pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
+
+      /* quindi apro la cassa */
+      if (open_cassa(&supermercato->cassieri[i]) == 0) {
+        cassa = &supermercato->cassieri[i]; /* cassa aperta correttamente */
+        supermercato->num_casse++; /* incrementa il numero di casse aperte */
+      }
+    }
+
+  }
+
+  pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
+
+  return cassa;
+}
+
+
+/*
+ * Chiude la prima cassa tra quelle aperte.
+ * Se non ce ne sono, restituisce NULL, altrimenti restituisce il puntatore
+ * alla cassa chiusa.
+ */
+cassiere_t *close_cassa_supermercato(supermercato_t *supermercato) {
+  assert(supermercato != NULL);
+  assert((int)supermercato->num_casse >= 0);
+
+  pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
+
+  if (supermercato->num_casse == 0) {
+    pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
+    return NULL;
+  }
+
+  cassiere_t *cassa = NULL;
+  /* cerca la prima cassa che rispetta le condizioni per essere chiusa */
+  for (uint i=0; i<supermercato->max_casse && cassa == NULL; i++) {
+
+    /* se la cassa è attiva e non è in chiusura */
+    if (is_cassa_active(&supermercato->cassieri[i]) 
+        && !is_cassa_closing(&supermercato->cassieri[i])) {
+
+      /* chiudo la cassa */
+      if (close_cassa(&supermercato->cassieri[i]) == 0) {
+        cassa = &supermercato->cassieri[i]; /* cassa correttamente in chiusura */
+        supermercato->num_casse--; /* decrementa il numero di casse aperte */
+
+        /* rilascio il lock per attendere la cassa e non causare deadlock */
+        pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
+        wait_cassa(&supermercato->cassieri[i]); /* aspetta che la cassa chiuda */
+        pthread_mutex_lock_safe(&supermercato->cassieri_mtx);
+      }
+    }
+
+  }
+  pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
+
+  return cassa;
 }
 

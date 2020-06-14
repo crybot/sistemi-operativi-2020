@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall -Wpedantic -pthread -Warray-bounds -Wextra -Wwrite-strings -Wno-parentheses
-OBJECTS = supermercato.o cliente.o cassiere.o direttore.o queue.o parser.o
+OBJECTS = supermercato.o cliente.o cassiere.o direttore.o queue.o parser.o threadpool.o 
 SRC = src
 TEST = test
 TESTS = $(wildcard $(TEST)/*.c)
@@ -12,7 +12,7 @@ MAIN = main
 all: $(MAIN).o $(OBJECTS)
 	$(CC) $(CFLAGS) $< $(OBJECTS) -o $(MAIN)
 
-$(MAIN).o: $(MAIN).c supermercato.h cliente.h cassiere.h parser.h
+$(MAIN).o: $(MAIN).c supermercato.h cliente.h cassiere.h parser.h direttore.h
 
 supermercato.o: supermercato.c supermercato.h cassiere.h defines.h
 
@@ -20,11 +20,13 @@ cliente.o: cliente.c cliente.h supermercato.h defines.h utils.h
 
 cassiere.o: cassiere.c cassiere.h cliente.h defines.h utils.h
 
-direttore.o: direttore.c direttore.h defines.h
+direttore.o: direttore.c direttore.h cassiere.h supermercato.h defines.h
 
 queue.o: queue.c queue.h
 
 parser.o: parser.c parser.h
+
+threadpool.o: threadpool.c threadpool.h
 
 test: $(TEST_BINS)
 	@echo "Test eseguiti con successo!"

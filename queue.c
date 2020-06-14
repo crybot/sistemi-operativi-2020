@@ -27,7 +27,8 @@ queue_t *queue_create() {
 
   queue->head = NULL;
   queue->tail = NULL;
-  pthread_mutex_init(&queue->mtx, NULL);
+  pthread_mutex_init_ec(&queue->mtx, NULL);
+  pthread_cond_init(&queue->not_empty_cond, NULL);
   return queue;
 }
 
@@ -40,15 +41,17 @@ int queue_empty(queue_t *queue) {
     handle_error("queue_empty: queue is NULL");
   }
 
-  pthread_mutex_lock(&queue->mtx);
+  pthread_mutex_lock_safe(&queue->mtx);
   int empty = queue->head == NULL;
-  pthread_mutex_unlock(&queue->mtx);
+  pthread_mutex_unlock_safe(&queue->mtx);
 
   return empty;
 }
 
 /*
  * Inserisce un nuovo elemento in fondo alla coda.
+ * Segnala ai thread in attesa sulla condition variable queue->not_empty_cond,
+ * che un nuovo elemento è disponibile.
  */
 void queue_push(queue_t *queue, void *value) {
   assert(queue != NULL);
@@ -73,7 +76,7 @@ void queue_push(queue_t *queue, void *value) {
    * potrebbe non essere più verificata. 
    */
   /* Sezione critica */
-  pthread_mutex_lock(&queue->mtx); /* lock */
+  pthread_mutex_lock_safe(&queue->mtx); /* lock */
   if (queue->head == NULL) { /* coda vuota */
     queue->head = node;
     queue->tail = node;
@@ -84,7 +87,8 @@ void queue_push(queue_t *queue, void *value) {
     queue->tail->next = node;
     queue->tail = node;
   }
-  pthread_mutex_unlock(&queue->mtx); /* unlock */
+  pthread_cond_broadcast(&queue->not_empty_cond);
+  pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
 }
 
 /*
@@ -98,10 +102,10 @@ void* queue_pop(queue_t *queue) {
   }
 
   /* sezione critica */
-  pthread_mutex_lock(&queue->mtx); /* lock */
+  pthread_mutex_lock_safe(&queue->mtx); /* lock */
 
   if (queue->head == NULL) { /* coda vuota */
-    pthread_mutex_unlock(&queue->mtx); /* unlock */
+    pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
     return NULL;
   }
 
@@ -111,7 +115,7 @@ void* queue_pop(queue_t *queue) {
   void* value = node->value;
   queue->head = node->next;
 
-  pthread_mutex_unlock(&queue->mtx); /* unlock */
+  pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
 
   free(node);
 
@@ -129,15 +133,15 @@ void* queue_top(queue_t *queue) {
   }
 
   /* sezione critica */
-  pthread_mutex_lock(&queue->mtx); /* lock */
+  pthread_mutex_lock_safe(&queue->mtx); /* lock */
 
   if (queue->head == NULL) { /* coda vuota */
-    pthread_mutex_unlock(&queue->mtx); /* unlock */
+    pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
     return NULL;
   }
 
   void *value = queue->head->value;
-  pthread_mutex_unlock(&queue->mtx); /* unlock */
+  pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
 
   return assert(value != NULL), value;
 }
@@ -152,10 +156,10 @@ size_t queue_size(queue_t *queue) {
   }
 
   /* sezione critica */
-  pthread_mutex_lock(&queue->mtx); /* lock */
+  pthread_mutex_lock_safe(&queue->mtx); /* lock */
 
   if (queue->head == NULL) {
-    pthread_mutex_unlock(&queue->mtx); /* unlock */
+    pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
     return 0;
   }
 
@@ -163,7 +167,7 @@ size_t queue_size(queue_t *queue) {
   queue_node_t *node = queue->head;
   while (++n, (node = node->next) != NULL);
 
-  pthread_mutex_unlock(&queue->mtx); /* unlock */
+  pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
   return n;
 }
 
@@ -184,10 +188,10 @@ void queue_free(queue_t *queue) {
 void queue_map(void (*f)(void*), queue_t *queue) {
   assert(queue != NULL);
 
-  pthread_mutex_lock(&queue->mtx); /* lock */
+  pthread_mutex_lock_safe(&queue->mtx); /* lock */
 
   if (queue->head == NULL) { /* coda vuota */
-    pthread_mutex_unlock(&queue->mtx); /* unlock */
+    pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
     return;
   }
   queue_node_t *node = queue->head;
@@ -198,5 +202,19 @@ void queue_map(void (*f)(void*), queue_t *queue) {
     node = node->next;
   }
 
-  pthread_mutex_unlock(&queue->mtx); /* unlock */
+  pthread_mutex_unlock_safe(&queue->mtx); /* unlock */
+}
+
+/*
+ * Attende che la coda non sia vuota.
+ * Nota: al termine della chiamata, la funzione rilascia il lock, quindi non è
+ * assicurato che vi siano ancora elementi all'interno della coda quando il
+ * controllo ritorna al chiamante.
+ */
+void queue_wait(queue_t *queue) {
+  pthread_mutex_lock_safe(&queue->mtx);
+  while (queue->head != NULL) { /* coda non vuota */
+    pthread_cond_wait(&queue->not_empty_cond, &queue->mtx);
+  }
+  pthread_mutex_unlock_safe(&queue->mtx);
 }

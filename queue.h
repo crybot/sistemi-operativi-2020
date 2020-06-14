@@ -12,6 +12,8 @@ typedef struct queue {
   queue_node_t *head;
   queue_node_t *tail;
   pthread_mutex_t mtx;
+  pthread_cond_t not_empty_cond;
+  //TODO: aggiungere cv not_full_cond
 }queue_t;
 
 
@@ -23,5 +25,6 @@ extern void *queue_top(queue_t *queue);
 extern size_t queue_size(queue_t *queue);
 extern void queue_free(queue_t *queue);
 extern void queue_map(void (*f)(void*), queue_t *queue);
+extern void queue_wait(queue_t *queue);
 
 #endif
