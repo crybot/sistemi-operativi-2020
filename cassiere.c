@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define INTERVAL 500
+#define INTERVAL 1000
 
 static void set_active(cassiere_t *cassiere, int active) {
   pthread_mutex_lock_safe(&cassiere->mtx);
@@ -165,7 +165,9 @@ static void *working_thread(void *arg) {
       nanosleep(&ts, &ts); 
 
       /* Comunica il numero di clienti in coda al direttore */
+      pthread_mutex_lock_safe(&cassiere->mtx);
       comunica_numero_clienti(cassiere, queue_size(cassiere->clienti));
+      pthread_mutex_unlock_safe(&cassiere->mtx);
 
       /* Imposta il tempo di servizio rimanente per processare il cliente */
       ts.tv_sec = remaining_time / 1000; // secondi
@@ -188,11 +190,11 @@ static void *working_thread(void *arg) {
     clock_gettime(CLOCK_REALTIME, &timer_end);
 
     //TODO: debug
-    int t = diff_ms(client_start, client_end);
-    printf("CASSA %d: TSR = %.5f (s)  TST = %.5f (s)\n",
-        cassa_id(cassiere),
-        (double)t/1000,
-        (double)waiting_time/1000);
+    // int t = diff_ms(client_start, client_end);
+    // printf("CASSA %d: TSR = %.5f (s)  TST = %.5f (s)\n",
+    //     cassa_id(cassiere),
+    //     (double)t/1000,
+    //     (double)waiting_time/1000);
 
     /* Verifica che lo scarto tra il tempo impiegato e il tempo teorico di servizio 
      * sia minore del 10% del tempo teorico di servizio

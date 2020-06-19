@@ -145,7 +145,7 @@ cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsi
   assert(attive == r + 1); /* le casse attive visitate in sequenza sono r - 1 */
 
   /* dal file cassiere.c */
-  printf("CASSA %d: nuovo cliente incodato\n", cassa_id(scelta));
+  // printf("CASSA %d: nuovo cliente incodato\n", cassa_id(scelta));
   add_cliente(scelta, cliente);
 
   pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);

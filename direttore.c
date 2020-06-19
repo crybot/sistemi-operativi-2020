@@ -26,9 +26,7 @@ static int count = 0; /* numero di comunicazioni ricevute da parte dei cassieri 
 static int should_open_cassa() {
   assert(in_coda != NULL);
   for (uint i=0; i<s->max_casse; i++) {
-    if (is_cassa_active(&s->cassieri[i])
-        && !is_cassa_closing(&s->cassieri[i])
-        && in_coda[i] >= d_s2) {
+    if (in_coda[i] >= d_s2) {
       return 1; /* è necessario aprire una cassa */
     }
   }
@@ -45,10 +43,9 @@ static int should_close_cassa() {
   assert(in_coda != NULL);
   int n = 0; /* numero di casse aperte con al più un cliente */
   uint i;
+
   for (i=0; i<s->max_casse && n < d_s1; i++) {
-    if (is_cassa_active(&s->cassieri[i])
-        && !is_cassa_closing(&s->cassieri[i])
-        && in_coda[i] <= 1) {
+    if (in_coda[i] <= 1) {
       n++;
     }
   }
@@ -98,8 +95,8 @@ static void *working_thread(void *arg) {
       if (cassa != NULL) {
         printf("DIRETTORE: Aprendo cassa %d.\n", cassa_id(cassa));
       }
-      count = 0;
       pthread_mutex_lock_safe(&mtx); 
+      count = 0;
     }
     if (should_close_cassa() && count >= PATIENCE) {
       /* rilascia il lock perchè close_cassa_supermercato() è una funzione bloccante */
@@ -109,8 +106,9 @@ static void *working_thread(void *arg) {
       if (cassa != NULL) {
         printf("DIRETTORE: Chiudendo cassa %d.\n", cassa_id(cassa));
       }
-      count = 0;
       pthread_mutex_lock_safe(&mtx); 
+      in_coda[cassa_id(cassa)] = 0;
+      count = 0;
     }
   }
 
@@ -171,7 +169,7 @@ void comunica_numero_clienti(const cassiere_t *cassiere, int n) {
   assert(count >= 0);
   count++;
 
-  /* Segnala il direttore gli attuali clienti in coda */
+  /* Segnala al direttore gli attuali clienti in coda */
   pthread_cond_signal(&open_close_cassa_cond);
 
   pthread_mutex_unlock_safe(&mtx);

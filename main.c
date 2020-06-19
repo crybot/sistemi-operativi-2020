@@ -185,7 +185,7 @@ int main() {
 
   pthread_create(&create_thread, NULL, creazione_clienti, (void*)&info);
 
-  sleep(6);
+  sleep(100);
 
   printf("Supermercato in chiusura \n");
 
