@@ -31,6 +31,9 @@ void* cliente_worker(void* arg) {
   printf("Un cliente ha terminato di scegliere gli acquisti dopo: %d ms \n",
       cliente->dwell_time);
 
+  //TODO: gestire cliente con 0 prodotti. Non si mette in coda, ma contatta
+  //      il direttore per uscire.
+
   /* thread loop: 
    * attende finchè il cliente non viene servito,
    * la cassa è stata chiusa, oppure il supermercato sta chiudendo.

@@ -12,24 +12,31 @@
 #include <time.h>
 #include <pthread.h>
 #include <assert.h>
+#include <signal.h>
+
+#define CLOSE_QUIT 1
+#define CLOSE_HUP 2
 
 static pthread_t create_thread;
 static pthread_mutex_t deallocate_mtx;
-static int quit = 0;
+static volatile sig_atomic_t quit = 0;
+
+//TODO: usare (void) nelle funzioni che non accettano parametri
 
 static int quit_thread() {
-  pthread_mutex_lock_safe(&deallocate_mtx);
-  int q = quit;
-  pthread_mutex_unlock_safe(&deallocate_mtx);
+  // pthread_mutex_lock_safe(&deallocate_mtx);
+  // int q = quit;
+  // pthread_mutex_unlock_safe(&deallocate_mtx);
 
-  return q;
+  // return q;
+  return quit;
 }
 
 static void set_quit() {
   /* Informa il thread di terminare la propria esecuzione */
-  pthread_mutex_lock_safe(&deallocate_mtx);
-  quit = 1;
-  pthread_mutex_unlock_safe(&deallocate_mtx);
+  // pthread_mutex_lock_safe(&deallocate_mtx);
+  // quit = 1;
+  // pthread_mutex_unlock_safe(&deallocate_mtx);
   /* Termina il thread quanto entra in un cancellation point 
    * se non ha già terminato.
    * Serve per evitare che il thread si blocchi dopo una chiamata bloccante e 
@@ -63,8 +70,16 @@ static cliente_t *generate_cliente(int p, int t, supermercato_t *s) {
 
 static void cleanup(void* arg) {
   assert(arg != NULL);
+  assert(quit != 0);
   printf("ESEGUENDO CLEANUP HANDLER...\n");
   threadpool_t *tpool = (threadpool_t*) arg;
+
+  /* Se è stato ricevuto un segnale SIGHUP: attende la terminazione dei clienti */
+  if (quit == CLOSE_HUP) {
+    printf("ASPETTANDO LA TERMINAZIONE DEI CLIENTI...\n");
+    threadpool_wait(tpool, 0);
+  }
+
   threadpool_free(tpool);
   printf("CLEANUP ESEGUITO\n");
 }
@@ -160,10 +175,26 @@ static void *creazione_clienti(void* arg) {
    * cancellation point.
    */
   pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
+  /* Se è stato ricevuto un segnale SIGHUP: attende la terminazione dei clienti */
+  assert(quit != 0);
+  if (quit == CLOSE_HUP) {
+    threadpool_wait(tpool, 0);
+  }
   /* Deallocazione risorse usate dalla threadpool */
   threadpool_free(tpool);
 
   return (void*)0;
+}
+
+//TODO: implementare signal handler
+static void signal_handler(int signum) {
+  if (signum == SIGQUIT) {
+    quit = CLOSE_QUIT;
+  }
+  else if (signum == SIGHUP) {
+    quit = CLOSE_HUP;
+  }
 }
 
 int main() {
@@ -175,6 +206,21 @@ int main() {
 
   pthread_mutex_init_ec(&deallocate_mtx, NULL);
 
+  /* Registrazione handler dei segnali */
+  struct sigaction sa;
+  sa.sa_handler = signal_handler;
+  sigemptyset(&sa.sa_mask);
+  sigaddset(&sa.sa_mask, SIGQUIT);  
+  sigaddset(&sa.sa_mask, SIGHUP); 
+  sa.sa_flags = SA_RESTART;
+
+  if (sigaction(SIGQUIT, &sa, NULL) == -1) {
+    handle_error("Could not catch SIGQUIT");
+  }
+  if (sigaction(SIGHUP, &sa, NULL) == -1) {
+    handle_error("Could not catch SIGHUP");
+  }
+
   /* Crea il supermercato */
   supermercato_t *s = create_supermercato(config.params[K], config.params[I], config.params[TP]);
   init_direttore(s, config.params[S1], config.params[S2]);
@@ -185,17 +231,30 @@ int main() {
 
   pthread_create(&create_thread, NULL, creazione_clienti, (void*)&info);
 
-  sleep(100);
+  pause(); /* Aspetta un segnale */
 
   printf("Supermercato in chiusura \n");
 
   /* terminazione */
-  set_quit(1); /* quit threads */
-  close_supermercato(s); /* chiude il supermercato e i cassieri */
-  pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
-  printf("THREAD JOINED\n");
-  terminate_direttore(); /* termina il thread direttore */
-  free_supermercato(s); /* libera la memoria allocata dai cassieri */
+  assert(quit != 0);
+
+  if (quit == CLOSE_HUP) { /* terminazione con attesa clienti */
+    set_quit(); /* termina il thread di creazione clienti */
+    pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
+    close_supermercato(s); /* chiude il supermercato e i cassieri */
+    //TODO: implementare logging statistiche
+    terminate_direttore(); /* termina il thread direttore */
+    free_supermercato(s); /* libera la memoria allocata dai cassieri */
+  }
+  else if (quit == CLOSE_QUIT) { /* terminazione istantanea */
+    set_quit(); /* termina il thread di creazione clienti */
+    close_supermercato(s); /* chiude il supermercato e i cassieri */
+    pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
+    //TODO: implementare logging statistiche
+    terminate_direttore(); /* termina il thread direttore */
+    free_supermercato(s); /* libera la memoria allocata dai cassieri */
+  }
+
 
   printf("Supermercato chiuso \n");
 

@@ -269,6 +269,7 @@ int is_cassa_closing(cassiere_t *cassiere) {
   return closing;
 }
 
+
 /*
  * Inizializza una struttura cassiere_t con i valori di default.
  * Il campo cassiere._id è un numero intero incrementale.
@@ -351,7 +352,7 @@ int close_cassa(cassiere_t *cassiere) {
 void wait_cassa(cassiere_t *cassiere) {
   assert(cassiere != NULL);
   /* la cassa deve essere chiusa oppure in chiusura */
-  assert(is_cassa_closing(cassiere) || !is_cassa_active(cassiere));
+  // assert(is_cassa_closing(cassiere) || !is_cassa_active(cassiere));
 
   /* se il thread cassiere non è stato creato, non fare niente */
   if (!cassiere->allocated) {
