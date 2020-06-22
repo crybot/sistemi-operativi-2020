@@ -17,26 +17,15 @@
 #define CLOSE_QUIT 1
 #define CLOSE_HUP 2
 
+struct t_info {
+  supermercato_t *supermercato;
+  const config_t *config;
+};
+
 static pthread_t create_thread;
-static pthread_mutex_t deallocate_mtx;
 static volatile sig_atomic_t quit = 0;
 
-//TODO: usare (void) nelle funzioni che non accettano parametri
-
-static int quit_thread() {
-  // pthread_mutex_lock_safe(&deallocate_mtx);
-  // int q = quit;
-  // pthread_mutex_unlock_safe(&deallocate_mtx);
-
-  // return q;
-  return quit;
-}
-
-static void set_quit() {
-  /* Informa il thread di terminare la propria esecuzione */
-  // pthread_mutex_lock_safe(&deallocate_mtx);
-  // quit = 1;
-  // pthread_mutex_unlock_safe(&deallocate_mtx);
+static void stop_creazione_clienti(void) {
   /* Termina il thread quanto entra in un cancellation point 
    * se non ha già terminato.
    * Serve per evitare che il thread si blocchi dopo una chiamata bloccante e 
@@ -48,15 +37,9 @@ static void set_quit() {
    * thread prima di chiamare tale funzione.
    */
   if (pthread_cancel(create_thread) != 0) {
-    handle_error("set_quit: pthread_cancel");
+    handle_error("stop_creazione_clienti: pthread_cancel");
   }
 }
-
-struct t_info {
-  supermercato_t *supermercato;
-  const config_t *config;
-};
-
 
 /*
  * Crea un nuovo cliente con al massimo p prodotti e con tempo di permanenza
@@ -68,6 +51,13 @@ static cliente_t *generate_cliente(int p, int t, supermercato_t *s) {
   return create_cliente(dwell, n, s);
 }
 
+/*
+ * Routine di cleanup eseguida dal thread di creazione clienti prima di
+ * terminare.
+ * Se è stato ricevuto un segnale SIGHUP, attende la terminazione di tutti i
+ * job cliente attualmente in sospeso nella threadpool prima di liberare la
+ * memoria.
+ */
 static void cleanup(void* arg) {
   assert(arg != NULL);
   assert(quit != 0);
@@ -126,10 +116,10 @@ static void *creazione_clienti(void* arg) {
     threadpool_add(tpool, tjob);
   }
 
-  while (!quit_thread()) {
+  while (quit == 0) {
     /* Attesa condizionata sul numero di clienti all'interno del supermercato */
     pthread_mutex_lock_safe(&tpool->mtx);
-    while (tpool->job_count > max_clienti - e && !quit_thread()) {
+    while (tpool->job_count > max_clienti - e && quit == 0) {
       /* Registra la routine di pulizia chiamata a seguito di pthread_cancel().
        * Nota: L'ordine di esecuzione degli handler di cleanup è inverso rispetto
        * all'ordine di inserimento (ordine LIFO). */
@@ -154,7 +144,7 @@ static void *creazione_clienti(void* arg) {
     pthread_mutex_unlock_safe(&tpool->mtx);
 
     /* Termina l'esecuzione se è stata segnalata la chiusura */
-    if (quit_thread()) {
+    if (quit != 0) {
       break;
     }
 
@@ -187,7 +177,7 @@ static void *creazione_clienti(void* arg) {
   return (void*)0;
 }
 
-//TODO: implementare signal handler
+/* Gestore dei segnali SIGQUIT e SIGHUP */
 static void signal_handler(int signum) {
   if (signum == SIGQUIT) {
     quit = CLOSE_QUIT;
@@ -199,12 +189,7 @@ static void signal_handler(int signum) {
 
 int main() {
   clock_t start, end;
-  //TODO: gestione errori
-  //TODO: passaggio path file di configurazione come parametro
-  config_t config;
-  parse_config("config.txt", &config);
-
-  pthread_mutex_init_ec(&deallocate_mtx, NULL);
+  double time_elapsed;
 
   /* Registrazione handler dei segnali */
   struct sigaction sa;
@@ -221,46 +206,49 @@ int main() {
     handle_error("Could not catch SIGHUP");
   }
 
+  /* Parsing del file di configurazione */
+  //TODO: gestione errori
+  //TODO: passaggio path file di configurazione come parametro
+  config_t config;
+  parse_config("config.txt", &config);
+
   /* Crea il supermercato */
   supermercato_t *s = create_supermercato(config.params[K], config.params[I], config.params[TP]);
   init_direttore(s, config.params[S1], config.params[S2]);
   struct t_info info = { s, &config };
-
-  sleep(1); /* attende un secondo */ 
   start = time(NULL);
 
+  /* Crea il thread di creazione dei clienti */
   pthread_create(&create_thread, NULL, creazione_clienti, (void*)&info);
 
-  pause(); /* Aspetta un segnale */
+  /* Attende l'arrivo di un segnale che modifichi lo stato di terminazione */
+  while(quit == 0) {
+    pause(); /* Aspetta un segnale */
+  }
 
+  /* Terminazione e liberazione risorse*/
+  assert(quit != 0);
   printf("Supermercato in chiusura \n");
 
-  /* terminazione */
-  assert(quit != 0);
-
+  stop_creazione_clienti(); /* termina il thread di creazione clienti */
   if (quit == CLOSE_HUP) { /* terminazione con attesa clienti */
-    set_quit(); /* termina il thread di creazione clienti */
     pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
     close_supermercato(s); /* chiude il supermercato e i cassieri */
     //TODO: implementare logging statistiche
-    terminate_direttore(); /* termina il thread direttore */
-    free_supermercato(s); /* libera la memoria allocata dai cassieri */
   }
   else if (quit == CLOSE_QUIT) { /* terminazione istantanea */
-    set_quit(); /* termina il thread di creazione clienti */
     close_supermercato(s); /* chiude il supermercato e i cassieri */
     pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
     //TODO: implementare logging statistiche
-    terminate_direttore(); /* termina il thread direttore */
-    free_supermercato(s); /* libera la memoria allocata dai cassieri */
   }
-
+  terminate_direttore(); /* termina il thread direttore */
+  free_supermercato(s); /* libera la memoria allocata dai cassieri */
 
   printf("Supermercato chiuso \n");
 
   end = time(NULL);
-  double time = (double)(end - start);
-  printf("Tempo impiegato: %f s\n", time);
+  time_elapsed = (double)(end - start);
+  printf("Tempo impiegato: %f s\n", time_elapsed);
 
 
   exit(EXIT_SUCCESS);
