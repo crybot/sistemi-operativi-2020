@@ -84,6 +84,7 @@ void* cliente_worker(void* arg) {
  * Restituisce: un puntatore al cliente creato.
  */
 cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermercato) {
+  static int cliente_id = 0;
   assert(supermercato != NULL);
   assert(dwell_time >= 0);
   assert(products >= 0);
@@ -93,11 +94,16 @@ cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermer
     handle_error("malloc create_cliente");
   }
 
+  cliente->id = cliente_id++;
   cliente->dwell_time = dwell_time;
   cliente->products = products;
   cliente->servito = 0;
   cliente->supermercato = supermercato;
   cliente->cassiere = NULL;
+  cliente->total_time = 0;
+  cliente->queue_time = 0;
+  cliente->queue_changes = 0;
+
   pthread_mutex_init_ec(&cliente->mtx, NULL);
   pthread_cond_init(&cliente->servito_cond, NULL);
 

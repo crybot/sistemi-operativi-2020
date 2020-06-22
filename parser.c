@@ -4,11 +4,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <ctype.h>
 
 /* Nomi dei parametri di configurazione */
 static const char* params_names[N_PARAMS] = {
   "C", "E", "K", "I", "T", "P", "TP", "AI", "S1", "S2"
 };
+
+/* Rimuove (in place) gli spazi finali di una stringa */
+static char *trim(char *s) {
+  char *tmp = s + strlen(s);
+  while(isspace(*--tmp));
+  *(tmp + 1) = '\0';
+  return s;
+}
 
 /*
  * Parsa il file di configurazione la cui path è passata in input e imposta
@@ -44,6 +53,10 @@ void parse_config(const char *path, config_t *config) {
         if (!strcmp(key, params_names[i])) {
           config->params[i] = atoi(value); /* converte la stringa in intero */
         }
+      }
+
+      if (!strcmp(key, "LOG")) {
+        strcpy(config->LOG, trim(value));
       }
     }
   }

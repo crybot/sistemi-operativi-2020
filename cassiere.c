@@ -285,6 +285,8 @@ void init_cassiere(cassiere_t *cassiere, int tp) {
   cassiere->closing = 0; /* cassiere inizialmente non in chiusura */
   cassiere->allocated = 0; /* thread cassiere ancora non inizializzato */
   cassiere->tp = tp;
+  cassiere->clienti_serviti =  0;
+  cassiere->numero_chiusure =  0;
 
   /* crea la coda clienti - inizialmente vuota */
   cassiere->clienti = queue_create();

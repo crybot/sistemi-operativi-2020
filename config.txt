@@ -2,6 +2,7 @@ C=150
 E=5
 K=10
 I=5
+LOG=prova.log
 T=200
 P=100
 TP=10

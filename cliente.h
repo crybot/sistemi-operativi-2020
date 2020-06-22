@@ -8,6 +8,7 @@ struct cassiere;
 
 //TODO: aggiungere id cliente per logging e analisi
 typedef struct cliente {
+  int id;         /* id univoco associato al cliente */
   int dwell_time; /* tempo impiegato per scegliere i prodotti */
   int products;   /* numero di prodotti comprati */
   int servito;    /* 1 se servito, 0 altrimenti */
@@ -15,6 +16,10 @@ typedef struct cliente {
   struct supermercato *supermercato; /* riferimento al supermercato */
   pthread_mutex_t mtx;
   pthread_cond_t servito_cond;
+  /* statistics */
+  int total_time; /* tempo totale trascorso all'interno del supermercato */
+  int queue_time; /* tempo trascorso in coda alle casse */
+  int queue_changes; /* numero di volte in cui il cliente ha cambiato coda */
 }cliente_t;
 
 cliente_t* create_cliente(
