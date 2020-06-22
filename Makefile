@@ -5,7 +5,7 @@ SRC = src
 TEST = test
 TESTS = $(wildcard $(TEST)/*.c)
 TEST_BINS = $(patsubst $(TEST)/%.c, $(TEST)/%.test, $(TESTS))
-MAIN = main
+MAIN = simulazione
 
 .PHONY: clean test
 
