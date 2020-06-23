@@ -1,11 +1,11 @@
-C=150
-E=5
+C=10
+E=2
 K=10
 I=5
-LOG=prova.log
-T=200
-P=100
+T=50
+P=10
 TP=10
 AI=1000
 S1=2
 S2=10
+LOG=prova.log

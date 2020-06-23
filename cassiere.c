@@ -239,6 +239,7 @@ static void *working_thread(void *arg) {
  */
 //TODO: valutare sincronizzazione
 int cassa_id(const cassiere_t *cassiere) {
+  // TODO: check error simulazione: cassiere.c:242: cassa_id: Assertion `cassiere != NULL' failed.
   return assert(cassiere != NULL), cassiere->id;
 }
 

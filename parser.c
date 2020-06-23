@@ -23,6 +23,7 @@ static char *trim(char *s) {
  * Parsa il file di configurazione la cui path è passata in input e imposta
  * le variabili globali
  */
+//TODO: deallocate parser (LOG)
 void parse_config(const char *path, config_t *config) {
   assert(path != NULL && config != NULL);
 
@@ -56,7 +57,9 @@ void parse_config(const char *path, config_t *config) {
       }
 
       if (!strcmp(key, "LOG")) {
-        strcpy(config->LOG, trim(value));
+        char *log_file = trim(value);
+        config->LOG = (char *)malloc(sizeof(char)*(strlen(log_file)+1));
+        strcpy(config->LOG, log_file);
       }
     }
   }

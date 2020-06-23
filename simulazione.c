@@ -6,6 +6,7 @@
 #include "queue.h"
 #include "threadpool.h"
 #include "defines.h"
+#include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -211,6 +212,9 @@ int main() {
   //TODO: passaggio path file di configurazione come parametro
   config_t config;
   parse_config("config.txt", &config);
+
+  /* Inizializzazione logger */
+  log_setfile(config.LOG);
 
   /* Crea il supermercato */
   supermercato_t *s = create_supermercato(config.params[K], config.params[I], config.params[TP]);

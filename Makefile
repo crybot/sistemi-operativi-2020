@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall -Wpedantic -pthread -Warray-bounds -Wextra -Wwrite-strings -Wno-parentheses
-OBJECTS = supermercato.o cliente.o cassiere.o direttore.o queue.o parser.o threadpool.o 
+OBJECTS = supermercato.o cliente.o cassiere.o direttore.o queue.o parser.o threadpool.o logger.o stopwatch.o
 SRC = src
 TEST = test
 TESTS = $(wildcard $(TEST)/*.c)
@@ -12,21 +12,25 @@ MAIN = simulazione
 all: $(MAIN).o $(OBJECTS)
 	$(CC) $(CFLAGS) $< $(OBJECTS) -o $(MAIN)
 
-$(MAIN).o: $(MAIN).c supermercato.h cliente.h cassiere.h parser.h direttore.h
+$(MAIN).o: $(MAIN).c supermercato.h cliente.h cassiere.h parser.h direttore.h logger.h
 
 supermercato.o: supermercato.c supermercato.h cassiere.h defines.h
 
-cliente.o: cliente.c cliente.h supermercato.h defines.h utils.h
+cliente.o: cliente.c cliente.h supermercato.h defines.h utils.h timer.h
 
 cassiere.o: cassiere.c cassiere.h cliente.h defines.h utils.h
 
 direttore.o: direttore.c direttore.h cassiere.h supermercato.h defines.h
 
-queue.o: queue.c queue.h
+queue.o: queue.c queue.h defines.h
 
-parser.o: parser.c parser.h
+parser.o: parser.c parser.h defines.h
 
-threadpool.o: threadpool.c threadpool.h
+threadpool.o: threadpool.c threadpool.h defines.h
+
+logger.o: logger.h defines.h
+
+stopwatch.o: stopwatch.h defines.h
 
 test: $(TEST_BINS)
 	@echo "Test eseguiti con successo!"
@@ -40,3 +44,4 @@ test: $(TEST_BINS)
 clean:
 	-rm -f *.o *.gch $(MAIN)
 	-rm -f $(TEST)/*.test $(TEST)/*.output
+	-rm -f *.log

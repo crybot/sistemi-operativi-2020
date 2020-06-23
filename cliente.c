@@ -2,6 +2,8 @@
 #include "supermercato.h"
 #include "defines.h"
 #include "utils.h" /* safe_seed() */
+#include "logger.h"
+#include "stopwatch.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
@@ -18,23 +20,29 @@ void* cliente_worker(void* arg) {
    * Ottiene un intero incrementale in maniera thread-safe da usare per la
    * generazione di numeri casuali.
    */
+  unsigned int queue_changes = 0;
   unsigned int seed = safe_seed();
   // printf("SEED GENERATO DA CLIENTE: %d\n", seed);
 
-  /* creazione record timespec e conversione dwell_time in nanosecondi */
+  /* Creazione record timespec e conversione dwell_time in nanosecondi */
   struct timespec ts;
   ts.tv_sec = cliente->dwell_time / 1000; // secondi
   ts.tv_nsec = (cliente->dwell_time % 1000)*1000*1000; // nanosecondi
 
-  /* cliente impiega dwell_time millisecondi scegliendo i prodotti */
+  /* Cronometri utilizzati per misurare il tempo impiegato dal cliente nel
+   * supermercato e in coda */
+  stopwatch_t *total_time = stopwatch_create(STOPWATCH_STARTING);
+  stopwatch_t *queue_time = stopwatch_create(STOPWATCH_STOPPED);
+
+  /* Cliente impiega dwell_time millisecondi scegliendo i prodotti */
   nanosleep(&ts, &ts);
-  printf("Un cliente ha terminato di scegliere gli acquisti dopo: %d ms \n",
-      cliente->dwell_time);
+  log_write("CLIENTE %d: terminato di scegliere gli acquisti dopo %d ms \n", 
+      cliente->id, cliente->dwell_time);
 
   //TODO: gestire cliente con 0 prodotti. Non si mette in coda, ma contatta
   //      il direttore per uscire.
 
-  /* thread loop: 
+  /* Thread loop: 
    * attende finchè il cliente non viene servito,
    * la cassa è stata chiusa, oppure il supermercato sta chiudendo.
    */
@@ -52,26 +60,39 @@ void* cliente_worker(void* arg) {
      */
     if (cliente->cassiere == NULL) {
       cassa = place_cliente(cliente, cliente->supermercato, &seed);
+
+      /* comincia a misurare il tempo trascorso in coda*/
+      if (cassa != NULL) {
+        stopwatch_start(queue_time); 
+      }
     }
     else if (!is_cassa_active(cliente->cassiere) 
         && !is_cassa_closing(cliente->cassiere)) {
       cassa = place_cliente(cliente, cliente->supermercato, &seed);
+      if (cassa != NULL) {
+        ++queue_changes;
+      }
     }
 
     if (cassa == NULL) { /* non ci sono casse aperte nel supermercato */
       assert(cliente->supermercato->num_casse == 0);
       assert(!cliente->servito);
       assert(cliente->cassiere == NULL || !is_cassa_closing(cliente->cassiere));
-      printf("Cliente terminato per mancanza di casse aperte\n");
+      log_write("CLIENTE %d: terminato per mancanza di casse aperte\n", cliente->id);
       pthread_mutex_unlock_safe(&cliente->mtx);
+      log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
+      log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
+      log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
 
       return (void*) 1; /* cliente non servito */
     }
-
     pthread_cond_wait(&cliente->servito_cond, &cliente->mtx);
   }
 
   pthread_mutex_unlock_safe(&cliente->mtx);
+  log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
+  log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
+  log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
   return (void*) 0;
 }
 
@@ -100,9 +121,6 @@ cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermer
   cliente->servito = 0;
   cliente->supermercato = supermercato;
   cliente->cassiere = NULL;
-  cliente->total_time = 0;
-  cliente->queue_time = 0;
-  cliente->queue_changes = 0;
 
   pthread_mutex_init_ec(&cliente->mtx, NULL);
   pthread_cond_init(&cliente->servito_cond, NULL);
@@ -115,8 +133,7 @@ cliente_t *create_cliente(int dwell_time, int products, supermercato_t *supermer
  * effettuato il join.
  */
 void free_cliente(cliente_t* cliente) {
-  // pthread_join(cliente->thread_id, NULL);
-  printf("Liberando memoria cliente...\n");
+  log_write("CLIENTE %d: Liberando memoria\n", cliente->id);
   free(cliente);
 }
 

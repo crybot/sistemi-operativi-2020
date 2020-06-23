@@ -16,10 +16,6 @@ typedef struct cliente {
   struct supermercato *supermercato; /* riferimento al supermercato */
   pthread_mutex_t mtx;
   pthread_cond_t servito_cond;
-  /* statistics */
-  int total_time; /* tempo totale trascorso all'interno del supermercato */
-  int queue_time; /* tempo trascorso in coda alle casse */
-  int queue_changes; /* numero di volte in cui il cliente ha cambiato coda */
 }cliente_t;
 
 cliente_t* create_cliente(
