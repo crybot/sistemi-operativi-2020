@@ -52,7 +52,7 @@ supermercato_t *create_supermercato(const config_t *config) {
    * nessuno (oltre a supermercato) ne detiene i riferimenti.
    */
   for (int i=0; i<max_casse; i++) {
-    init_cassiere(&s->cassieri[i], tempo);
+    init_cassiere(&s->cassieri[i], tempo, config->params[S]);
     if (i < num_casse) {
       open_cassa(&s->cassieri[i]);
     }

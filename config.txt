@@ -6,6 +6,7 @@ T=50
 P=10
 TP=10
 AI=1000
+S=1000
 S1=2
 S2=10
 LOG=prova.log

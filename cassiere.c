@@ -11,9 +11,6 @@
 #include <unistd.h>
 #include <execinfo.h>
 
-
-#define INTERVAL 1000
-
 static void set_active(cassiere_t *cassiere, int active) {
   pthread_mutex_lock_safe(&cassiere->mtx);
   cassiere->active = active;
@@ -59,7 +56,7 @@ static void *working_thread(void *arg) {
   /* generazione tempo di servizio casuale nel range 20-80 ms*/
   int service_time = 20 + rand_r(&seed) % (80-20);
   int waiting_time;
-  int remaining_time = INTERVAL; /* TODO: parametro di configurazione */
+  int remaining_time = cassiere->s; 
 
   pthread_mutex_lock_safe(&cassiere->mtx);
   clock_gettime(CLOCK_REALTIME, &timer_start); /* Inizializza il timer */
@@ -90,7 +87,7 @@ static void *working_thread(void *arg) {
         /* Comunica il numero di clienti in coda al direttore */
         comunica_numero_clienti(cassiere, queue_size(cassiere->clienti));
         clock_gettime(CLOCK_REALTIME, &timer_start);
-        remaining_time = INTERVAL;
+        remaining_time = cassiere->s;
       }
 
       /* Rimane in attesa di nuovi clienti da servire al più 
@@ -106,7 +103,7 @@ static void *working_thread(void *arg) {
         /* Comunica il numero di clienti in coda al direttore */
         comunica_numero_clienti(cassiere, queue_size(cassiere->clienti));
         clock_gettime(CLOCK_REALTIME, &timer_start);
-        remaining_time = INTERVAL;
+        remaining_time = cassiere->s;
       }
     }
 
@@ -129,7 +126,7 @@ static void *working_thread(void *arg) {
 
       /* Resetta il timer per la comunicazione con il direttore */
       clock_gettime(CLOCK_REALTIME, &timer_start);
-      remaining_time = INTERVAL; //TODO: parametro di configurazione
+      remaining_time = cassiere->s;
     }
 
 
@@ -175,7 +172,7 @@ static void *working_thread(void *arg) {
 
       /* Resetta il timer per la comunicazione con il direttore */
       clock_gettime(CLOCK_REALTIME, &timer_start);
-      remaining_time = INTERVAL; //TODO: parametro di configurazione
+      remaining_time = cassiere->s;
     }
 
     nanosleep(&ts, &ts); /* Servi il cliente */
@@ -242,7 +239,6 @@ static void *working_thread(void *arg) {
  */
 //TODO: valutare sincronizzazione
 int cassa_id(const cassiere_t *cassiere) {
-  // TODO: check error simulazione: cassiere.c:242: cassa_id: Assertion `cassiere != NULL' failed.
   return assert(cassiere != NULL), cassiere->id;
 }
 
@@ -280,7 +276,7 @@ int is_cassa_closing(cassiere_t *cassiere) {
  * Poichè la funzione non è rientrate e non è sincronizzata, questa non risulta
  * thread-safe.
  */
-void init_cassiere(cassiere_t *cassiere, int tp) {
+void init_cassiere(cassiere_t *cassiere, int tp, int s) {
   static int cassiere_id = 0;
   printf("Inizializzando cassiere %d\n", cassiere_id);
   assert(cassiere != NULL);
@@ -289,6 +285,7 @@ void init_cassiere(cassiere_t *cassiere, int tp) {
   cassiere->closing = 0; /* cassiere inizialmente non in chiusura */
   cassiere->allocated = 0; /* thread cassiere ancora non inizializzato */
   cassiere->tp = tp;
+  cassiere->s = s;
   cassiere->clienti_serviti =  0;
   cassiere->numero_chiusure =  0;
   cassiere->prodotti_venduti =  0;

@@ -8,7 +8,7 @@
 
 /* Nomi dei parametri di configurazione */
 static const char* params_names[N_PARAMS] = {
-  "C", "E", "K", "I", "T", "P", "TP", "AI", "S1", "S2"
+  "C", "E", "K", "I", "T", "P", "TP", "AI", "S", "S1", "S2"
 };
 
 /* Rimuove (in place) gli spazi finali di una stringa */
