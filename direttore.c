@@ -163,8 +163,8 @@ void comunica_numero_clienti(const cassiere_t *cassiere, int n) {
   pthread_mutex_lock_safe(&mtx);
 
   in_coda[cassa_id(cassiere)] = n;
-  printf("CASSA %d: Comunicati al direttore %d clienti in coda.\n",
-      cassa_id(cassiere), n);
+  // printf("CASSA %d: Comunicati al direttore %d clienti in coda.\n",
+      // cassa_id(cassiere), n);
 
   assert(count >= 0);
   count++;

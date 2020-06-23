@@ -39,3 +39,15 @@ void log_write(const char *format, ...) {
   va_end(args);
 }
 
+
+/*
+ * Termina il logger e libera le risorse allocate, compresi descrittori di file
+ * aperti.
+ */
+void log_close() {
+  assert(file != NULL);
+  if (fclose(file) != 0) {
+    handle_error("log_close: fclose");
+  }
+}
+

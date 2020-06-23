@@ -22,7 +22,6 @@ void* cliente_worker(void* arg) {
    */
   unsigned int queue_changes = 0;
   unsigned int seed = safe_seed();
-  // printf("SEED GENERATO DA CLIENTE: %d\n", seed);
 
   /* Creazione record timespec e conversione dwell_time in nanosecondi */
   struct timespec ts;
@@ -78,21 +77,25 @@ void* cliente_worker(void* arg) {
       assert(cliente->supermercato->num_casse == 0);
       assert(!cliente->servito);
       assert(cliente->cassiere == NULL || !is_cassa_closing(cliente->cassiere));
-      log_write("CLIENTE %d: terminato per mancanza di casse aperte\n", cliente->id);
       pthread_mutex_unlock_safe(&cliente->mtx);
+      log_write("CLIENTE %d: terminato per mancanza di casse aperte\n", cliente->id);
       log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
       log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
       log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
-
+      stopwatch_free(total_time);
+      stopwatch_free(queue_time);
       return (void*) 1; /* cliente non servito */
     }
     pthread_cond_wait(&cliente->servito_cond, &cliente->mtx);
   }
 
   pthread_mutex_unlock_safe(&cliente->mtx);
+  log_write("CLIENTE %d: prodotti acquistati = %d\n", cliente->id, cliente->products);
   log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
   log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
   log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
+  stopwatch_free(total_time);
+  stopwatch_free(queue_time);
   return (void*) 0;
 }
 

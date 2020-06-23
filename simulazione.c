@@ -62,17 +62,14 @@ static cliente_t *generate_cliente(int p, int t, supermercato_t *s) {
 static void cleanup(void* arg) {
   assert(arg != NULL);
   assert(quit != 0);
-  printf("ESEGUENDO CLEANUP HANDLER...\n");
   threadpool_t *tpool = (threadpool_t*) arg;
 
   /* Se è stato ricevuto un segnale SIGHUP: attende la terminazione dei clienti */
   if (quit == CLOSE_HUP) {
-    printf("ASPETTANDO LA TERMINAZIONE DEI CLIENTI...\n");
     threadpool_wait(tpool, 0);
   }
 
   threadpool_free(tpool);
-  printf("CLEANUP ESEGUITO\n");
 }
 
 /*
@@ -213,11 +210,8 @@ int main() {
   config_t config;
   parse_config("config.txt", &config);
 
-  /* Inizializzazione logger */
-  log_setfile(config.LOG);
-
   /* Crea il supermercato */
-  supermercato_t *s = create_supermercato(config.params[K], config.params[I], config.params[TP]);
+  supermercato_t *s = create_supermercato(&config);
   init_direttore(s, config.params[S1], config.params[S2]);
   struct t_info info = { s, &config };
   start = time(NULL);
@@ -238,15 +232,14 @@ int main() {
   if (quit == CLOSE_HUP) { /* terminazione con attesa clienti */
     pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
     close_supermercato(s); /* chiude il supermercato e i cassieri */
-    //TODO: implementare logging statistiche
   }
   else if (quit == CLOSE_QUIT) { /* terminazione istantanea */
     close_supermercato(s); /* chiude il supermercato e i cassieri */
     pthread_join(create_thread, NULL); /* termina il thread di creazione dei clienti */
-    //TODO: implementare logging statistiche
   }
   terminate_direttore(); /* termina il thread direttore */
   free_supermercato(s); /* libera la memoria allocata dai cassieri */
+  free_config(&config);
 
   printf("Supermercato chiuso \n");
 

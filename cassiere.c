@@ -3,10 +3,14 @@
 #include "defines.h"
 #include "utils.h" /* safe_seed() */
 #include "direttore.h"
+#include "stopwatch.h"
+#include "logger.h"
 #include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <execinfo.h>
+
 
 #define INTERVAL 1000
 
@@ -50,8 +54,6 @@ static void *working_thread(void *arg) {
    * generazione di numeri casuali.
    */
   unsigned int seed = safe_seed();
-  // printf("SEED GENERATO DA CASSIERE: %d\n", seed);
-
 
   struct timespec ts, timer_start, timer_end, twait, client_start, client_end;
   /* generazione tempo di servizio casuale nel range 20-80 ms*/
@@ -61,13 +63,14 @@ static void *working_thread(void *arg) {
 
   pthread_mutex_lock_safe(&cassiere->mtx);
   clock_gettime(CLOCK_REALTIME, &timer_start); /* Inizializza il timer */
+
+  /* Fa partire il cronometro per il periodo di apertura della cassa */
+  stopwatch_t *opening_time = stopwatch_create(STOPWATCH_STARTING);
+  /* Crea il cronometro per misurare il tempo per servire il cliente*/
+  stopwatch_t *service_stopwatch = stopwatch_create(STOPWATCH_STOPPED);
+
   /* thread loop */
   while(!cassiere->closing && cassiere->active) {
-    
-    //TODO: debug
-    printf("CASSA %d: remaining_time = %.5f (s)\n", 
-        cassa_id(cassiere),
-        (double)remaining_time/1000);
     /*
      * Nota: la coda clienti è acceduta concorrentemente dal cassiere e dai
      * thread che gestiscono la creazione e la rilocazione dei clienti.
@@ -132,10 +135,7 @@ static void *working_thread(void *arg) {
 
     assert(queue_size(cassiere->clienti) > 0);
     cliente_t *cliente = (cliente_t*) queue_top(cassiere->clienti);
-
-    printf("CASSA %d: Servendo cliente con %d prodotti\n",
-        cassa_id(cassiere),
-        cliente->products);
+    stopwatch_start(service_stopwatch);
 
     /* Rilascia il mutex prima che il thread si blocchi */
     pthread_mutex_unlock_safe(&cassiere->mtx);
@@ -178,23 +178,23 @@ static void *working_thread(void *arg) {
       remaining_time = INTERVAL; //TODO: parametro di configurazione
     }
 
-    nanosleep(&ts, &ts); /* servi il cliente */
+    nanosleep(&ts, &ts); /* Servi il cliente */
 
-    printf("CASSA %d: Cliente servito.\n", cassa_id(cassiere));
     cliente_t *servito = queue_pop(cassiere->clienti);
     assert(cliente == servito);
 
+    /* Aggiorna statistiche cassiere */
+    cassiere->clienti_serviti++;
+    cassiere->prodotti_venduti += servito->products;
+
     /* Informa il thread cliente che è stato servito */
     set_servito(servito, 1);
+    log_write("CASSA %d: tempo di servizio cliente = %d ms\n",
+        cassa_id(cassiere),
+        stopwatch_end(service_stopwatch));
+
     clock_gettime(CLOCK_REALTIME, &client_end);
     clock_gettime(CLOCK_REALTIME, &timer_end);
-
-    //TODO: debug
-    // int t = diff_ms(client_start, client_end);
-    // printf("CASSA %d: TSR = %.5f (s)  TST = %.5f (s)\n",
-    //     cassa_id(cassiere),
-    //     (double)t/1000,
-    //     (double)waiting_time/1000);
 
     /* Verifica che lo scarto tra il tempo impiegato e il tempo teorico di servizio 
      * sia minore del 10% del tempo teorico di servizio
@@ -211,11 +211,6 @@ static void *working_thread(void *arg) {
     pthread_mutex_lock_safe(&cassiere->mtx);
   }
 
-
-  printf("CASSA %d: chiusa\n", cassa_id(cassiere));
-  printf("CASSA %d: clienti in coda dopo la chiusura: %zu \n", 
-      cassa_id(cassiere), queue_size(cassiere->clienti));
-
   /* segnalazione chiusura cassa ai clienti */
   while (!queue_empty(cassiere->clienti)) {
     cliente_t *c = queue_pop(cassiere->clienti);
@@ -227,9 +222,17 @@ static void *working_thread(void *arg) {
 
   cassiere->active = 0;
   cassiere->closing = 0;
+  cassiere->numero_chiusure++;
 
   /* Rilascia il lock sul cassiere */
   pthread_mutex_unlock_safe(&cassiere->mtx);
+
+  log_write("CASSA %d: tempo parziale di apertura = %d ms\n",
+      cassa_id(cassiere),
+      stopwatch_end(opening_time));
+
+  stopwatch_free(opening_time);
+  stopwatch_free(service_stopwatch);
   return (void*)0;
 }
 
@@ -288,6 +291,7 @@ void init_cassiere(cassiere_t *cassiere, int tp) {
   cassiere->tp = tp;
   cassiere->clienti_serviti =  0;
   cassiere->numero_chiusure =  0;
+  cassiere->prodotti_venduti =  0;
 
   /* crea la coda clienti - inizialmente vuota */
   cassiere->clienti = queue_create();
@@ -364,19 +368,14 @@ void wait_cassa(cassiere_t *cassiere) {
     return;
   }
 
-  printf("CASSA %d: joining thread\n", cassa_id(cassiere));
-
   int s = pthread_join(cassiere->thread, NULL);
   if (s == ESRCH) { /* (s == 3) no thread with the specified ID could be found */
     /* il thread del cassiere richiesto ha già terminato */
-    // printf("Thread already closed\n"); //TODO: used for debugging
     return;
   }
   if (s != 0) { /* altri tipi di errore */
     handle_error("pthread_join cassiere");
   }
-
-  printf("CASSA %d: thread joined\n", cassa_id(cassiere));
 
   set_allocated(cassiere, 0);
 }

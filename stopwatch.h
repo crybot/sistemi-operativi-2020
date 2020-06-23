@@ -9,5 +9,6 @@ typedef struct stopwatch stopwatch_t;
 struct stopwatch *stopwatch_create(int start);
 void stopwatch_start(struct stopwatch *stopwatch);
 int stopwatch_end(struct stopwatch *stopwatch);
+void stopwatch_free(struct stopwatch *stopwatch);
 
 #endif

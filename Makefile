@@ -14,11 +14,11 @@ all: $(MAIN).o $(OBJECTS)
 
 $(MAIN).o: $(MAIN).c supermercato.h cliente.h cassiere.h parser.h direttore.h logger.h
 
-supermercato.o: supermercato.c supermercato.h cassiere.h defines.h
+supermercato.o: supermercato.c supermercato.h cassiere.h defines.h logger.h
 
-cliente.o: cliente.c cliente.h supermercato.h defines.h utils.h timer.h
+cliente.o: cliente.c cliente.h supermercato.h defines.h utils.h stopwatch.h logger.h
 
-cassiere.o: cassiere.c cassiere.h cliente.h defines.h utils.h
+cassiere.o: cassiere.c cassiere.h cliente.h defines.h utils.h stopwatch.h logger.h
 
 direttore.o: direttore.c direttore.h cassiere.h supermercato.h defines.h
 

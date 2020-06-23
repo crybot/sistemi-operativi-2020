@@ -18,9 +18,9 @@ typedef struct cassiere {
   pthread_cond_t not_empty_cond;
   queue_t *clienti; /* clienti in coda alla cassa */
   /* statistics */
-  int clienti_serviti; /* numero di clienti serviti */
-  int numero_chiusure;     /* numero di chisusure della cassa */
-  // queue_t *active_times; /* lista contenente tutti i tempi di apertura della cassa */
+  int clienti_serviti;  /* numero di clienti serviti */
+  int numero_chiusure;  /* numero di chisusure della cassa */
+  int prodotti_venduti; /* numero di prodotti venduti dal cassiere */
 }cassiere_t;
 
 extern int cassa_id(const cassiere_t *cassiere);

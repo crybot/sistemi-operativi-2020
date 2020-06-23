@@ -1,5 +1,7 @@
 #include "supermercato.h"
 #include "defines.h"
+#include "logger.h"
+#include "parser.h" /* config_t */
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -18,10 +20,16 @@
  *
  * Restituisce: il puntatore alla struttura supermercato_t creata.
  */
-supermercato_t *create_supermercato(int max_casse, int num_casse, int tempo) {
+supermercato_t *create_supermercato(const config_t *config) {
+  assert(config != NULL);
+  int max_casse = config->params[K], num_casse = config->params[I];
+  int tempo = config->params[TP];
   assert(num_casse >= 0 && max_casse >= 0);
   assert(max_casse >= num_casse);
   assert(tempo >= 0);
+
+  /* Inizializzazione logger */
+  log_setfile(config->LOG);
 
   supermercato_t *s = (supermercato_t*) malloc(sizeof(supermercato_t));
   if (s == NULL) {
@@ -83,6 +91,25 @@ void close_supermercato(supermercato_t *supermercato) {
   for (uint i=0; i<supermercato->max_casse; i++) {
     wait_cassa(&supermercato->cassieri[i]);
   }
+
+  /*
+   * Logging statistiche supermercato
+   */
+  int totale_prodotti = 0;
+  int totale_serviti = 0;
+  for (uint i=0; i<supermercato->max_casse; i++) {
+    log_write("CASSA %d: clienti serviti = %d\n",
+        cassa_id(&supermercato->cassieri[i]),
+        supermercato->cassieri[i].clienti_serviti);
+    log_write("CASSA %d: numero chiusure = %d\n",
+        cassa_id(&supermercato->cassieri[i]),
+        supermercato->cassieri[i].numero_chiusure);
+    totale_prodotti += supermercato->cassieri[i].prodotti_venduti;
+    totale_serviti += supermercato->cassieri[i].clienti_serviti;
+  }
+
+  log_write("SUPERMERCATO: prodotti venduti = %d\n", totale_prodotti);
+  log_write("SUPERMERCATO: clienti serviti = %d\n", totale_serviti);
 }
 
 /*
@@ -92,11 +119,10 @@ void close_supermercato(supermercato_t *supermercato) {
 void free_supermercato(supermercato_t *supermercato) {
   assert(supermercato != NULL);
   for (uint i=0; i<supermercato->max_casse; i++) {
-    // queue_map((void (*)(void*))&free_cliente, supermercato->cassieri[i].clienti);
     /* Libera la memoria delle code clienti */
     queue_free(supermercato->cassieri[i].clienti);
   }
-
+  log_close();
   free(supermercato->cassieri);
   free(supermercato);
 }
@@ -145,7 +171,6 @@ cassiere_t* place_cliente(cliente_t *cliente, supermercato_t *supermercato, unsi
   assert(attive == r + 1); /* le casse attive visitate in sequenza sono r - 1 */
 
   /* dal file cassiere.c */
-  // printf("CASSA %d: nuovo cliente incodato\n", cassa_id(scelta));
   add_cliente(scelta, cliente);
 
   pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
@@ -185,7 +210,6 @@ cassiere_t *open_cassa_supermercato(supermercato_t *supermercato) {
     }
 
   }
-
   pthread_mutex_unlock_safe(&supermercato->cassieri_mtx);
 
   return cassa;

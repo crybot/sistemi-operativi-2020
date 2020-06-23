@@ -68,3 +68,10 @@ int stopwatch_end(stopwatch_t *stopwatch) {
   clock_gettime(CLOCK_REALTIME, &stopwatch->end);
   return diff_ms(stopwatch);
 }
+
+/*
+ * Libera le risorse allocate dallo stopwatch.
+ */
+void stopwatch_free(stopwatch_t *stopwatch) {
+  free(stopwatch);
+}
