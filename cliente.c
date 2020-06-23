@@ -4,6 +4,7 @@
 #include "utils.h" /* safe_seed() */
 #include "logger.h"
 #include "stopwatch.h"
+#include "direttore.h" /* get_permesso() */
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
@@ -38,8 +39,17 @@ void* cliente_worker(void* arg) {
   log_write("CLIENTE %d: terminato di scegliere gli acquisti dopo %d ms \n", 
       cliente->id, cliente->dwell_time);
 
-  //TODO: gestire cliente con 0 prodotti. Non si mette in coda, ma contatta
-  //      il direttore per uscire.
+  /* Se il cliente non ha acquistato prodotti, chiede il permesso di uscire
+   * al direttore.
+   */
+  if (cliente->products == 0) {
+    get_permesso();
+    log_write("CLIENTE %d: terminato senza acquistare prodotti\n", cliente->id);
+    log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
+    stopwatch_free(total_time);
+    stopwatch_free(queue_time);
+    return 0;
+  }
 
   /* Thread loop: 
    * attende finchè il cliente non viene servito,

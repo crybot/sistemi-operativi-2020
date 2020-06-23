@@ -188,3 +188,14 @@ void terminate_direttore() {
   pthread_join(thread_id, NULL);
   free(in_coda);
 }
+
+/*
+ * Comunica (il cliente) con il direttore la volontà di voler uscire dal
+ * supermercato.
+ * Il permesso è concesso se la funzione termina con successo.
+ */
+void get_permesso() {
+  pthread_mutex_lock_safe(&mtx);
+  /* dummy lock acquire to simulate a request */
+  pthread_mutex_unlock_safe(&mtx);
+}
