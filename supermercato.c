@@ -66,7 +66,6 @@ supermercato_t *create_supermercato(const config_t *config) {
  * La funzione termina con successo quando tutti i thread di lavoro dei
  * cassieri sono stati chiusi.
  */
-//TODO: gestire sincronizzazione num_casse
 void close_supermercato(supermercato_t *supermercato) {
   assert(supermercato != NULL);
   assert((int)supermercato->num_casse >= 0);

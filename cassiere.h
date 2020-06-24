@@ -26,13 +26,13 @@ typedef struct cassiere {
   long tempo_medio;      /* tempo medio di servizio clienti */
 }cassiere_t;
 
-extern int cassa_id(const cassiere_t *cassiere);
-extern int is_cassa_active(cassiere_t *cassiere);
-extern int is_cassa_closing(cassiere_t *cassiere);
-extern void init_cassiere(cassiere_t *cassiere, int tp, int s);
-extern int open_cassa(cassiere_t *cassiere);
-extern int close_cassa(cassiere_t *cassiere);
-extern void wait_cassa(cassiere_t *cassiere);
-extern void add_cliente(cassiere_t *cassiere, cliente_t *cliente);
+int cassa_id(const cassiere_t *cassiere);
+int is_cassa_active(cassiere_t *cassiere);
+int is_cassa_closing(cassiere_t *cassiere);
+void init_cassiere(cassiere_t *cassiere, int tp, int s);
+int open_cassa(cassiere_t *cassiere);
+int close_cassa(cassiere_t *cassiere);
+void wait_cassa(cassiere_t *cassiere);
+void add_cliente(cassiere_t *cassiere, cliente_t *cliente);
 
 #endif

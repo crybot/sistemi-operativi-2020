@@ -34,7 +34,6 @@ void log_write(const char *format, ...) {
   if (vfprintf(file, format, args) < 1) {
     handle_error("log_write: vfprintf");
   }
-  //TODO: forse è necessario fflush(file)
   pthread_mutex_unlock_safe(&mtx);
   va_end(args);
 }
@@ -44,7 +43,7 @@ void log_write(const char *format, ...) {
  * Termina il logger e libera le risorse allocate, compresi descrittori di file
  * aperti.
  */
-void log_close() {
+void log_close(void) {
   assert(file != NULL);
   if (fclose(file) != 0) {
     handle_error("log_close: fclose");

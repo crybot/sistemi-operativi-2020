@@ -19,7 +19,7 @@
  *
  * POST: queue_empty(queue_create()) == TRUE
  */
-queue_t *queue_create() {
+queue_t *queue_create(void) {
   queue_t *queue = (queue_t *) malloc(sizeof(queue_t));
   if (queue == NULL) {
     handle_error("malloc queue_create");

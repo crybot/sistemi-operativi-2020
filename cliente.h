@@ -6,7 +6,6 @@
 struct supermercato;
 struct cassiere;
 
-//TODO: aggiungere id cliente per logging e analisi
 typedef struct cliente {
   int id;         /* id univoco associato al cliente */
   int dwell_time; /* tempo impiegato per scegliere i prodotti */

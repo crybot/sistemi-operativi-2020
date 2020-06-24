@@ -17,14 +17,14 @@ typedef struct queue {
 }queue_t;
 
 
-extern queue_t *queue_create();
-extern int queue_empty(queue_t *queue);
-extern void queue_push(queue_t *queue, void *value);
-extern void *queue_pop(queue_t *queue);
-extern void *queue_top(queue_t *queue);
-extern size_t queue_size(queue_t *queue);
-extern void queue_free(queue_t *queue);
-extern void queue_map(void (*f)(void*), queue_t *queue);
-extern void queue_wait(queue_t *queue);
+queue_t *queue_create(void);
+int queue_empty(queue_t *queue);
+void queue_push(queue_t *queue, void *value);
+void *queue_pop(queue_t *queue);
+void *queue_top(queue_t *queue);
+size_t queue_size(queue_t *queue);
+void queue_free(queue_t *queue);
+void queue_map(void (*f)(void*), queue_t *queue);
+void queue_wait(queue_t *queue);
 
 #endif

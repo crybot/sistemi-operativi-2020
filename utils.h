@@ -15,7 +15,7 @@ static pthread_mutex_t seed_mtx = PTHREAD_MUTEX_INITIALIZER;
  * translation unit riceverà seed univoci, ma non influenzeranno la generazione
  * di seed effettuata dai thread di altre translatio unit.
  */
-static inline unsigned int safe_seed() {
+static inline unsigned int safe_seed(void) {
   static unsigned int seed = 0;
   pthread_mutex_lock(&seed_mtx);
   int s = seed++;

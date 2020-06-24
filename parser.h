@@ -27,7 +27,7 @@ typedef struct config {
   char *LOG; /* nome del file di log */
 }config_t;
 
-extern void parse_config(const char *path, config_t *config);
-extern void free_config(config_t *config);
+void parse_config(const char *path, config_t *config);
+void free_config(config_t *config);
 
 #endif

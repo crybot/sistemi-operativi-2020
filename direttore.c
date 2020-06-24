@@ -23,7 +23,7 @@ static int count = 0; /* numero di comunicazioni ricevute da parte dei cassieri 
  * La funzione utilizza variabili condivise tra più thread (in_coda), quindi
  * deve essere chiamata con un lock già ottenuto.
  */
-static int should_open_cassa() {
+static int should_open_cassa(void) {
   assert(in_coda != NULL);
   for (uint i=0; i<s->max_casse; i++) {
     if (in_coda[i] >= d_s2) {
@@ -39,7 +39,7 @@ static int should_open_cassa() {
  * La funzione utilizza variabili condivise tra più thread (in_coda), quindi
  * deve essere chiamata con un lock già ottenuto.
  */
-static int should_close_cassa() {
+static int should_close_cassa(void) {
   assert(in_coda != NULL);
   int n = 0; /* numero di casse aperte con al più un cliente */
   uint i;
@@ -175,7 +175,7 @@ void comunica_numero_clienti(const cassiere_t *cassiere, int n) {
 /*
  * Termina l'esecuzione del thread direttore e libera le risorse allocate.
  */
-void terminate_direttore() {
+void terminate_direttore(void) {
   pthread_mutex_lock_safe(&mtx);
   quit = 1;
 
@@ -191,7 +191,7 @@ void terminate_direttore() {
  * supermercato.
  * Il permesso è concesso se la funzione termina con successo.
  */
-void get_permesso() {
+void get_permesso(void) {
   pthread_mutex_lock_safe(&mtx);
   /* dummy lock acquire to simulate a request */
   pthread_mutex_unlock_safe(&mtx);

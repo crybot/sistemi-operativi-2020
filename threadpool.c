@@ -47,8 +47,6 @@ static void *job_worker(void *arg) {
     /* mutex locked */
     pthread_mutex_lock_safe(&tp->mtx);
     tp->job_count--;
-    //TODO: segnalare solo quando si verifica una determinata condizione,
-    //      passata in input alla create()
     pthread_cond_signal(&tp->not_full_cond);
   }
 
@@ -56,8 +54,6 @@ static void *job_worker(void *arg) {
   pthread_cond_signal(&tp->not_full_cond);
   pthread_mutex_unlock_safe(&tp->mtx);
   pthread_exit(0);
-
-  // return (void*)0;
 }
 
 
