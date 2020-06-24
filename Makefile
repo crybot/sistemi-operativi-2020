@@ -11,7 +11,7 @@ CONFIG_TEST = test.txt
 LOG_TEST = test.log
 ANALYSIS = analisi.sh
 
-.PHONY: clean test
+.PHONY: clean test test2
 
 all: $(MAIN).o $(OBJECTS)
 	$(CC) $(CFLAGS) $< $(OBJECTS) -o $(MAIN)
@@ -32,9 +32,9 @@ parser.o: parser.c parser.h defines.h
 
 threadpool.o: threadpool.c threadpool.h defines.h
 
-logger.o: logger.h defines.h
+logger.o: logger.c logger.h defines.h
 
-stopwatch.o: stopwatch.h defines.h
+stopwatch.o: stopwatch.c stopwatch.h defines.h
 
 test2: all
 	-rm -f $(LOG_TEST)
