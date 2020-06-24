@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <signal.h>
+#include <getopt.h>
 
 #define CLOSE_QUIT 1
 #define CLOSE_HUP 2
@@ -185,9 +186,23 @@ static void signal_handler(int signum) {
   }
 }
 
-int main() {
-  clock_t start, end;
-  double time_elapsed;
+int main(int argc, char *argv[]) {
+
+  char *config_file = "config.txt"; /* default path */
+  int opt;
+
+  /* Parsing argomenti linea di comando */
+  while ((opt = getopt(argc, argv, "c:")) != -1) {
+    switch(opt) {
+      case 'c':
+        config_file = optarg;
+        break;
+      default:
+        fprintf(stderr, "Uso: %s [-c config_file]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+  }
+
 
   /* Registrazione handler dei segnali */
   struct sigaction sa;
@@ -206,15 +221,13 @@ int main() {
 
   /* Parsing del file di configurazione */
   //TODO: gestione errori
-  //TODO: passaggio path file di configurazione come parametro
   config_t config;
-  parse_config("config.txt", &config);
+  parse_config(config_file, &config);
 
   /* Crea il supermercato */
   supermercato_t *s = create_supermercato(&config);
   init_direttore(s, config.params[S1], config.params[S2]);
   struct t_info info = { s, &config };
-  start = time(NULL);
 
   /* Crea il thread di creazione dei clienti */
   pthread_create(&create_thread, NULL, creazione_clienti, (void*)&info);
@@ -242,11 +255,6 @@ int main() {
   free_config(&config);
 
   printf("Supermercato chiuso \n");
-
-  end = time(NULL);
-  time_elapsed = (double)(end - start);
-  printf("Tempo impiegato: %f s\n", time_elapsed);
-
 
   exit(EXIT_SUCCESS);
 }

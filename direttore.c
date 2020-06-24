@@ -57,7 +57,6 @@ static int should_close_cassa() {
  * Thread di lavoro del direttore
  */
 static void *working_thread(void *arg) {
-  /* acquisisce il lock successivamente rilasciato dalla wait */
   cassiere_t *cassa;
   printf("DIRETTORE: Thread creato correttamente.\n");
 
@@ -163,8 +162,6 @@ void comunica_numero_clienti(const cassiere_t *cassiere, int n) {
   pthread_mutex_lock_safe(&mtx);
 
   in_coda[cassa_id(cassiere)] = n;
-  // printf("CASSA %d: Comunicati al direttore %d clienti in coda.\n",
-      // cassa_id(cassiere), n);
 
   assert(count >= 0);
   count++;
