@@ -9,7 +9,6 @@
 typedef struct supermercato {
   unsigned int max_casse; /* massimo numero di casse attive */
   unsigned int num_casse; /* numero di casse attive */
-  /* TODO: l'accesso all'insieme dei cassieri DEVE essere sincronizzato */
   pthread_mutex_t cassieri_mtx;
   cassiere_t *cassieri;   /* riferimenti ai cassieri del supermercato */
 }supermercato_t;
