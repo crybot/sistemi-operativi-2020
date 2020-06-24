@@ -1,3 +1,4 @@
+SHELL = /bin/bash
 CC = gcc
 CFLAGS = -g -Wall -Wpedantic -pthread -Warray-bounds -Wextra -Wwrite-strings -Wno-parentheses
 OBJECTS = supermercato.o cliente.o cassiere.o direttore.o queue.o parser.o threadpool.o logger.o stopwatch.o
@@ -6,6 +7,9 @@ TEST = test
 TESTS = $(wildcard $(TEST)/*.c)
 TEST_BINS = $(patsubst $(TEST)/%.c, $(TEST)/%.test, $(TESTS))
 MAIN = simulazione
+CONFIG_TEST = test.txt
+LOG_TEST = test.log
+ANALYSIS = analisi.sh
 
 .PHONY: clean test
 
@@ -32,7 +36,28 @@ logger.o: logger.h defines.h
 
 stopwatch.o: stopwatch.h defines.h
 
+test2: all
+	-rm -f $(LOG_TEST)
+	-rm -f $(CONFIG_TEST)
+	@echo "K=6" >> $(CONFIG_TEST)
+	@echo "C=50" >> $(CONFIG_TEST)
+	@echo "E=3" >> $(CONFIG_TEST)
+	@echo "T=200" >> $(CONFIG_TEST)
+	@echo "P=100" >> $(CONFIG_TEST)
+	@echo "S=20" >> $(CONFIG_TEST)
+	@echo "S1=2" >> $(CONFIG_TEST)
+	@echo "S2=10" >> $(CONFIG_TEST)
+	@echo "I=2" >> $(CONFIG_TEST)
+	@echo "TP=10" >> $(CONFIG_TEST)
+	@echo "LOG=$(LOG_TEST)" >> $(CONFIG_TEST)
+	@echo Esecuzione simulazione
+	@./$(MAIN) -c $(CONFIG_TEST) & PID=$$!; \
+		sleep 25 && kill -SIGQUIT $$PID \
+		&& wait $$PID
+	@./$(ANALYSIS) ./$(LOG_TEST)
+
 test: $(TEST_BINS)
+	$(MAKE) test2
 	@echo "Test eseguiti con successo!"
 
 %.test: %.c $(OBJECTS)
@@ -45,3 +70,4 @@ clean:
 	-rm -f *.o *.gch $(MAIN)
 	-rm -f $(TEST)/*.test $(TEST)/*.output
 	-rm -f *.log
+	-rm -f $(CONFIG_TEST)
