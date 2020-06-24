@@ -291,7 +291,6 @@ verificare deadlock (a patto che i lock siano gestiti correttamente).
     \node[circle, draw=black, minimum size=2.5cm] (cassiere) at (10,0) {Cassiere};
     \node[circle, draw=black, minimum size=2.5cm] (super) at (5,4.5) {Supermercato};
 
-
     % cassiere
     \draw[thick, ->] (cassiere) -- (direttore) %
     node[above=1pt, pos=0.5, scale=0.9, sloped] {comunica\_numero\_clienti()};
@@ -306,7 +305,7 @@ verificare deadlock (a patto che i lock siano gestiti correttamente).
     \draw[thick, ->] (cliente.15) -- (cassiere.165) %
     node[above=1pt, pos=0.5, scale=0.9, sloped] {is\_cassa\_*()};
 
-    \draw[thick, ->] (cliente.30) -- (super.south) %
+    \draw[thick, ->] (cliente.30) -- (super.210) %
     node[above=1pt, pos=0.5, scale=0.9, sloped] {place\_cliente()};
 
     % supermercato
@@ -316,8 +315,10 @@ verificare deadlock (a patto che i lock siano gestiti correttamente).
     \draw[thick, ->] (super.325) -- (cassiere.155) %
     node[below=1pt, pos=0.5, scale=0.9, sloped] {add\_cliente()};
     
+    % direttore
     \draw[densely dashed, ->] (direttore.south) -- (super.north) %
     node[above=1pt, pos=0.5, scale=0.9, sloped] {open\textbackslash close\_cassa()};
+
   \end{tikzpicture}
   \caption{Analisi grafica delle interdipendenze tra i vari attori della %
     simulazione}%
