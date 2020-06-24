@@ -22,6 +22,8 @@ typedef struct cassiere {
   int clienti_serviti;  /* numero di clienti serviti */
   int numero_chiusure;  /* numero di chisusure della cassa */
   int prodotti_venduti; /* numero di prodotti venduti dal cassiere */
+  int tempo_totale;     /* tempo totale di apertura */
+  long tempo_medio;      /* tempo medio di servizio clienti */
 }cassiere_t;
 
 extern int cassa_id(const cassiere_t *cassiere);

@@ -36,16 +36,18 @@ void* cliente_worker(void* arg) {
 
   /* Cliente impiega dwell_time millisecondi scegliendo i prodotti */
   nanosleep(&ts, &ts);
-  log_write("CLIENTE %d: terminato di scegliere gli acquisti dopo %d ms \n", 
-      cliente->id, cliente->dwell_time);
+  log_write("CLIENTE %d: terminato di scegliere gli acquisti dopo %.3f s \n", 
+      cliente->id, (double)cliente->dwell_time/1000);
 
   /* Se il cliente non ha acquistato prodotti, chiede il permesso di uscire
    * al direttore.
    */
   if (cliente->products == 0) {
     get_permesso();
-    log_write("CLIENTE %d: terminato senza acquistare prodotti\n", cliente->id);
-    log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
+    log_write("CLIENTE %d: prodotti acquistati = 0\n", cliente->id);
+    log_write("CLIENTE %d: tempo totale = %.3f\n", cliente->id, (double)stopwatch_end(total_time)/1000);
+    log_write("CLIENTE %d: tempo in coda = 0.000\n", cliente->id);
+    log_write("CLIENTE %d: cambi di coda = 0\n", cliente->id);
     stopwatch_free(total_time);
     stopwatch_free(queue_time);
     return 0;
@@ -89,8 +91,9 @@ void* cliente_worker(void* arg) {
       assert(cliente->cassiere == NULL || !is_cassa_closing(cliente->cassiere));
       pthread_mutex_unlock_safe(&cliente->mtx);
       log_write("CLIENTE %d: terminato per mancanza di casse aperte\n", cliente->id);
-      log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
-      log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
+      log_write("CLIENTE %d: prodotti acquistati = 0\n", cliente->id);
+      log_write("CLIENTE %d: tempo totale = %.3f\n", cliente->id, (double)stopwatch_end(total_time)/1000);
+      log_write("CLIENTE %d: tempo in coda = %.3f\n", cliente->id, (double)stopwatch_end(queue_time)/1000);
       log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
       stopwatch_free(total_time);
       stopwatch_free(queue_time);
@@ -101,8 +104,8 @@ void* cliente_worker(void* arg) {
 
   pthread_mutex_unlock_safe(&cliente->mtx);
   log_write("CLIENTE %d: prodotti acquistati = %d\n", cliente->id, cliente->products);
-  log_write("CLIENTE %d: tempo totale = %d ms\n", cliente->id, stopwatch_end(total_time));
-  log_write("CLIENTE %d: tempo in coda = %d ms\n", cliente->id, stopwatch_end(queue_time));
+  log_write("CLIENTE %d: tempo totale = %.3f\n", cliente->id, (double)stopwatch_end(total_time)/1000);
+  log_write("CLIENTE %d: tempo in coda = %.3f\n", cliente->id, (double)stopwatch_end(queue_time)/1000);
   log_write("CLIENTE %d: cambi di coda = %d \n", cliente->id, queue_changes);
   stopwatch_free(total_time);
   stopwatch_free(queue_time);

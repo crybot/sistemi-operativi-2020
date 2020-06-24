@@ -98,12 +98,21 @@ void close_supermercato(supermercato_t *supermercato) {
   int totale_prodotti = 0;
   int totale_serviti = 0;
   for (uint i=0; i<supermercato->max_casse; i++) {
+    log_write("CASSA %d: prodotti venduti = %d\n",
+        cassa_id(&supermercato->cassieri[i]),
+        supermercato->cassieri[i].prodotti_venduti);
     log_write("CASSA %d: clienti serviti = %d\n",
         cassa_id(&supermercato->cassieri[i]),
         supermercato->cassieri[i].clienti_serviti);
     log_write("CASSA %d: numero chiusure = %d\n",
         cassa_id(&supermercato->cassieri[i]),
         supermercato->cassieri[i].numero_chiusure);
+    log_write("CASSA %d: tempo totale = %.3f\n",
+        cassa_id(&supermercato->cassieri[i]),
+        (double)supermercato->cassieri[i].tempo_totale/1000);
+    log_write("CASSA %d: tempo medio servizio = %.3f\n",
+        cassa_id(&supermercato->cassieri[i]),
+        (double)supermercato->cassieri[i].tempo_medio/1000);
     totale_prodotti += supermercato->cassieri[i].prodotti_venduti;
     totale_serviti += supermercato->cassieri[i].clienti_serviti;
   }

@@ -186,9 +186,11 @@ static void *working_thread(void *arg) {
 
     /* Informa il thread cliente che è stato servito */
     set_servito(servito, 1);
-    log_write("CASSA %d: tempo di servizio cliente = %d ms\n",
+    int t = stopwatch_end(service_stopwatch);
+    log_write("CASSA %d: tempo di servizio cliente = %.3f\n",
         cassa_id(cassiere),
-        stopwatch_end(service_stopwatch));
+        (double)t/1000);
+    cassiere->tempo_medio += t;
 
     clock_gettime(CLOCK_REALTIME, &client_end);
     clock_gettime(CLOCK_REALTIME, &timer_end);
@@ -224,9 +226,17 @@ static void *working_thread(void *arg) {
   /* Rilascia il lock sul cassiere */
   pthread_mutex_unlock_safe(&cassiere->mtx);
 
-  log_write("CASSA %d: tempo parziale di apertura = %d ms\n",
+
+  int parziale = stopwatch_end(opening_time);
+  log_write("CASSA %d: tempo parziale di apertura = %.3f\n",
       cassa_id(cassiere),
-      stopwatch_end(opening_time));
+      (double)parziale/1000);
+  cassiere->tempo_totale += parziale;
+
+  if (cassiere->clienti_serviti > 0) {
+    cassiere->tempo_medio /= cassiere->clienti_serviti;
+  }
+
 
   stopwatch_free(opening_time);
   stopwatch_free(service_stopwatch);
@@ -288,6 +298,8 @@ void init_cassiere(cassiere_t *cassiere, int tp, int s) {
   cassiere->clienti_serviti =  0;
   cassiere->numero_chiusure =  0;
   cassiere->prodotti_venduti =  0;
+  cassiere->tempo_totale = 0;
+  cassiere->tempo_medio = 0;
 
   /* crea la coda clienti - inizialmente vuota */
   cassiere->clienti = queue_create();

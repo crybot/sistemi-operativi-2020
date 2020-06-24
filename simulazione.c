@@ -188,7 +188,7 @@ static void signal_handler(int signum) {
 
 int main(int argc, char *argv[]) {
 
-  char *config_file = "config.txt"; /* default path */
+  const char *config_file = "config.txt"; /* default path */
   int opt;
 
   /* Parsing argomenti linea di comando */
