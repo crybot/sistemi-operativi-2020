@@ -237,7 +237,6 @@ static void *working_thread(void *arg) {
  * Determina l'id univoco di un cassiere.
  * Restituisce un valore intero >= 0.
  */
-//TODO: valutare sincronizzazione
 int cassa_id(const cassiere_t *cassiere) {
   return assert(cassiere != NULL), cassiere->id;
 }
@@ -315,7 +314,7 @@ int open_cassa(cassiere_t *cassiere) {
 
   set_active(cassiere, 1);
   set_closing(cassiere, 0);
-  cassiere->allocated = 1; //TODO: valutare sincronizzazione
+  cassiere->allocated = 1;
   int s = pthread_create(&cassiere->thread, (void*)NULL, &working_thread, (void*)cassiere);
   if (s != 0) {
     handle_error("pthread_create cassiere");
@@ -329,7 +328,6 @@ int open_cassa(cassiere_t *cassiere) {
  * La terminazione istantanea non è garantita, ma avviene dopo aver servito il
  * cliente corrente.
  * Se il cassiere non è attivo, la funzione termina con successo.
- * TODO: valutare sincronizzazione accesso al campo cassiere->active;
  */
 int close_cassa(cassiere_t *cassiere) {
   assert(cassiere != NULL);

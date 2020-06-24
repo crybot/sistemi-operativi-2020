@@ -220,7 +220,6 @@ int main(int argc, char *argv[]) {
   }
 
   /* Parsing del file di configurazione */
-  //TODO: gestione errori
   config_t config;
   parse_config(config_file, &config);
 
